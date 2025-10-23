@@ -23,7 +23,7 @@
 
 GLFWwindow* CreateGLFWWindow(int width, int height, const std::string& title);
 void Render(GLFWwindow* window);
-void CreateTriangle();
+void CreateSquare();
 void CreateShaders();
 void DefineGUI();
 
@@ -41,7 +41,7 @@ int main()
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 
-	CreateTriangle();
+	CreateSquare();
 	CreateShaders();
 
 	// Enter main loop until the user closes the window
@@ -160,7 +160,7 @@ GLFWwindow* CreateGLFWWindow(int width, int height, const std::string& title)
 	return window;
 }
 
-void CreateTriangle()
+void CreateSquare()
 {
 	// TODO: create a triangle
 
