@@ -25,12 +25,16 @@ GLFWwindow* CreateGLFWWindow(int width, int height, const std::string& title);
 void Render(GLFWwindow* window);
 void CreateSquare();
 void CreateShaders();
+void CreateCubemap();
 void DefineGUI();
 
 // Since this is a simple demo we will use some globals
 // A real program should use a class to encapsulate state
 GLuint gTriangleVAO{ 0 };
 GLuint gShaderProgram{ 0 };
+GLuint gCubemapShader{ 0 };
+GLuint gCubemapTexture{ 0 };
+GLuint gCubemapVAO{ 0 };
 
 int main()
 {
@@ -42,6 +46,7 @@ int main()
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 
 	CreateSquare();
+	CreateCubemap();
 	CreateShaders();
 
 	// Enter main loop until the user closes the window
@@ -252,8 +257,8 @@ void CreateSquare()
 	};
 
 	GLuint VBOcolour;
-	glGenBuffers(1, &VBOcolour)
-		;
+	glGenBuffers(1, &VBOcolour);
+
 	glBindBuffer(GL_ARRAY_BUFFER, VBOcolour);
 
 	glBufferData(GL_ARRAY_BUFFER, colours.size() * sizeof(float), colours.data(), GL_STATIC_DRAW);
@@ -264,10 +269,15 @@ void CreateSquare()
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
+	//position attribute
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
+
+	//colour attribute
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (GLvoid*)0);
+	glEnableVertexAttribArray(1);
 
 	glBindVertexArray(0);
 
@@ -296,6 +306,109 @@ void CreateShaders()
 	glDeleteShader(fragmentShader);
 
 	KeithHelpers::LinkProgramShaders(gShaderProgram);
+}
+
+void CreateCubemap()
+{
+	float skyboxVertices[] = {
+		// positions          
+		-10.0f,  10.0f, -10.0f,
+		-10.0f, -10.0f, -10.0f,
+		 10.0f, -10.0f, -10.0f,
+		 10.0f, -10.0f, -10.0f,
+		 10.0f,  10.0f, -10.0f,
+		-10.0f,  10.0f, -10.0f,
+
+		-10.0f, -10.0f,  10.0f,
+		-10.0f, -10.0f, -10.0f,
+		-10.0f,  10.0f, -10.0f,
+		-10.0f,  10.0f, -10.0f,
+		-10.0f,  10.0f,  10.0f,
+		-10.0f, -10.0f,  10.0f,
+
+		 10.0f, -10.0f, -10.0f,
+		 10.0f, -10.0f,  10.0f,
+		 10.0f,  10.0f,  10.0f,
+		 10.0f,  10.0f,  10.0f,
+		 10.0f,  10.0f, -10.0f,
+		 10.0f, -10.0f, -10.0f,
+
+		-10.0f, -10.0f,  10.0f,
+		-10.0f,  10.0f,  10.0f,
+		 10.0f,  10.0f,  10.0f,
+		 10.0f,  10.0f,  10.0f,
+		 10.0f, -10.0f,  10.0f,
+		-10.0f, -10.0f,  10.0f,
+
+		-10.0f,  10.0f, -10.0f,
+		 10.0f,  10.0f, -10.0f,
+		 10.0f,  10.0f,  10.0f,
+		 10.0f,  10.0f,  10.0f,
+		-10.0f,  10.0f,  10.0f,
+		-10.0f,  10.0f, -10.0f,
+
+		-10.0f, -10.0f, -10.0f,
+		-10.0f, -10.0f,  10.0f,
+		 10.0f, -10.0f, -10.0f,
+		 10.0f, -10.0f, -10.0f,
+		-10.0f, -10.0f,  10.0f,
+		 10.0f, -10.0f,  10.0f
+
+	};
+
+	//create VAo and VBO for cubemap
+
+	GLuint cubemapVBO;
+	glGenVertexArrays(1, &gCubemapVAO);
+	glGenBuffers(1, &cubemapVBO);
+
+	glBindVertexArray(gCubemapVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, cubemapVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+	glBindVertexArray(0);
+	glDeleteBuffers(1, &cubemapVBO);
+
+	//generate and bind cubemap
+	glGenTextures(1, &gCubemapTexture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, gCubemapTexture);
+
+	//Define the 6 faces of cubemap
+	const int size = 512;
+	std::vector<unsigned char> faceData(size * size * 3);
+
+	//define colours for each face
+	unsigned char colours[6][3] = {
+		{128,128,128},
+		{128,128,128},
+		{100,100,255},
+		{100,255,100},
+		{255,255,255},
+		{255,255,255},
+	};
+
+	for (int i = 0; i < 6; i++)
+	{
+		for (int j = 0; j < size * size * 3; j += 3)
+		{
+			faceData[j] = colours[i][0];
+			faceData[j+1] = colours[i][1];
+			faceData[j+2] = colours[i][2];
+		}
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, size, size, 0, GL_RGB, GL_UNSIGNED_BYTE, faceData.data());
+	}
+
+	//set texture parameters
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
 void Render(GLFWwindow* window)
