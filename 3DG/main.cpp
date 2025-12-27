@@ -287,25 +287,35 @@ void CreateSquare()
 
 void CreateShaders()
 {
-	GLuint vertexShader = KeithHelpers::LoadAndCompileShader(GL_VERTEX_SHADER, "Data/Shaders/vertex_shader.vert");
-	GLuint fragmentShader = KeithHelpers::LoadAndCompileShader(GL_FRAGMENT_SHADER, "Data/Shaders/fragment_shader.frag");
-	gShaderProgram = glCreateProgram();
+	//GLuint vertexShader = KeithHelpers::LoadAndCompileShader(GL_VERTEX_SHADER, "Data/Shaders/vertex_shader.vert");
+	//GLuint fragmentShader = KeithHelpers::LoadAndCompileShader(GL_FRAGMENT_SHADER, "Data/Shaders/fragment_shader.frag");
+	//gShaderProgram = glCreateProgram();
 
-	// Attach the vertex shader to this program (copies it)
-	glAttachShader(gShaderProgram, vertexShader);
+	//// Attach the vertex shader to this program (copies it)
+	//glAttachShader(gShaderProgram, vertexShader);
 
-	// The attibute 0 maps to the input stream "vertex_position" in the vertex shader
-	// Not needed if you use (location=0) in the vertex shader itself
-	//glBindAttribLocation(m_program, 0, "vertex_position");
+	//// The attibute 0 maps to the input stream "vertex_position" in the vertex shader
+	//// Not needed if you use (location=0) in the vertex shader itself
+	////glBindAttribLocation(m_program, 0, "vertex_position");
 
-	// Attach the fragment shader (copies it)
-	glAttachShader(gShaderProgram, fragmentShader);
+	//// Attach the fragment shader (copies it)
+	//glAttachShader(gShaderProgram, fragmentShader);
 
-	// Done with the originals of these as we have made copies
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
+	//// Done with the originals of these as we have made copies
+	//glDeleteShader(vertexShader);
+	//glDeleteShader(fragmentShader);
 
-	KeithHelpers::LinkProgramShaders(gShaderProgram);
+	//KeithHelpers::LinkProgramShaders(gShaderProgram);
+
+	GLuint cubemapVertexShader = KeithHelpers::LoadAndCompileShader(GL_VERTEX_SHADER, "Data/Shaders/cubemap_vertex.vert");
+	GLuint cubemapFragmentShader = KeithHelpers::LoadAndCompileShader(GL_FRAGMENT_SHADER, "Data/Shaders/cubemap_fragment.frag");
+	gCubemapShader = glCreateProgram();
+
+	glAttachShader(gCubemapShader, cubemapVertexShader);
+	glAttachShader(gCubemapShader, cubemapFragmentShader);
+	glDeleteShader(cubemapVertexShader);
+	glDeleteShader(cubemapFragmentShader);
+	KeithHelpers::LinkProgramShaders(gCubemapShader);
 }
 
 void CreateCubemap()
@@ -415,17 +425,27 @@ void Render(GLFWwindow* window)
 {
 	// Clear the screen each time
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Use the shader program
-	glUseProgram(gShaderProgram);
+	glEnable(GL_DEPTH_TEST);
 
-	// TODO: bind the vertex array object for the triangle and draw it using glDrawArrays
-	// Remember to unbind the VAO afterwards
+	glDepthMask(GL_FALSE);
+	glUseProgram(gCubemapShader);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, gCubemapTexture);
+
+	glBindVertexArray(gCubemapVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+
+	glDepthMask(GL_TRUE);
+
 	glUseProgram(gShaderProgram);
 	glBindVertexArray(gTriangleVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glBindVertexArray(0);
+
 
 	// IMGUI	
 	ImGui_ImplOpenGL3_NewFrame();
