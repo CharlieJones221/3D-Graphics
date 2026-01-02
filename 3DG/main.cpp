@@ -64,7 +64,11 @@ int main()
 
 	// You should delete any OpenGL resources here
 	glDeleteProgram(gShaderProgram);
+	glDeleteProgram(gCubemapShader);
 	glDeleteVertexArrays(1, &gTriangleVAO);
+	glDeleteVertexArrays(1, &gCubemapVAO);
+	glDeleteTextures(1, &gCubemapTexture);
+
 
 	// Clean up and exit
 	glfwDestroyWindow(window);
