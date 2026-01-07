@@ -180,36 +180,12 @@ void CreateSquare()
 	//gTriangleVAO = VAO;
 
 	std::vector<float> verts = {
-		//Front
-	 -1.0f, -1.0f,  1.0f,
-	  1.0f, -1.0f,  1.0f,
-	 -1.0f,  1.0f,  1.0f,
-	  1.0f,  1.0f,  1.0f,
-	  //right
-	  1.0f, -1.0f,  1.0f,
-	  1.0f, -1.0f, -1.0f,
-	  1.0f,  1.0f,  1.0f,
-	  1.0f,  1.0f, -1.0f,
-	  //left
-	  1.0f, -1.0f, -1.0f,
-	 -1.0f, -1.0f, -1.0f,
-	  1.0f,  1.0f, -1.0f,
-	 -1.0f,  1.0f, -1.0f,
-	 //back
-	 -1.0f, -1.0f, -1.0f,
-	 -1.0f, -1.0f,  1.0f,
-	 -1.0f,  1.0f, -1.0f,
-	 -1.0f,  1.0f,  1.0f,
-	 //bottom
-	 -1.0f, -1.0f, -1.0f,
-	  1.0f, -1.0f, -1.0f,
-	 -1.0f, -1.0f,  1.0f,
-	  1.0f, -1.0f,  1.0f,
-	  //top
-	 -1.0f,  1.0f,  1.0f,
-	  1.0f,  1.0f,  1.0f,
-	 -1.0f,  1.0f, -1.0f,
-	  1.0f,  1.0f, -1.0f,
+		-0.5f, 0.5f, 0.0f, // top left point
+		0.5f, 0.5f, 0.0f, // top right point
+		0.5f, -0.5f, 0.0f, // bottom right point
+		0.5f, -0.5f, 0.0f, // bottom right point
+		-0.5f, -0.5f, 0.0f, // bottom left point
+		- 0.5f, 0.5f, 0.0f // top left point
 
 	};
 
@@ -224,34 +200,12 @@ void CreateSquare()
 
 	std::vector<float> colours = {
 		1,0,0,1,
+		0,1,0,1,
+		0,0,1,1,
+
 		1,0,0,1,
-		1,0,0,1,
-		1,0,0,1,//red
-
 		0,1,0,1,
-		0,1,0,1,
-		0,1,0,1,
-		0,1,0,1,//green
-
-		0,0,1,1,
-		0,0,1,1,
-		0,0,1,1,
-		0,0,1,1,//blue
-
-		1,1,0,1,
-		1,1,0,1,
-		1,1,0,1,
-		1,1,0,1,//yellow
-
-		1,0,1,1,
-		1,0,1,1,
-		1,0,1,1,
-		1,0,1,1,//magenta
-
-		0,1,1,1,
-		0,1,1,1,
-		0,1,1,1,
-		0,1,1,1,//cyan
+		0,0,1,1
 
 	};
 
@@ -332,9 +286,19 @@ void Render(GLFWwindow* window)
 
 	glDepthMask(GL_TRUE);
 
+<<<<<<< HEAD
+=======
+
+
+
+
+
+	// TODO: bind the vertex array object for the triangle and draw it using glDrawArrays
+	// Remember to unbind the VAO afterwards
+>>>>>>> parent of bf94329 (11)
 	glUseProgram(gShaderProgram);
 	glBindVertexArray(gTriangleVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 
 
