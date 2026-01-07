@@ -293,6 +293,11 @@ void Render(GLFWwindow* window)
 
 
 
+
+
+
+
+
 	// TODO: bind the vertex array object for the triangle and draw it using glDrawArrays
 	// Remember to unbind the VAO afterwards
 >>>>>>> parent of bf94329 (11)
