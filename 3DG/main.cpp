@@ -180,12 +180,9 @@ void CreateSquare()
 	//gTriangleVAO = VAO;
 
 	std::vector<float> verts = {
-		-0.5f, 0.5f, 0.0f, // top left point
-		0.5f, 0.5f, 0.0f, // top right point
-		0.5f, -0.5f, 0.0f, // bottom right point
-		0.5f, -0.5f, 0.0f, // bottom right point
-		-0.5f, -0.5f, 0.0f, // bottom left point
-		- 0.5f, 0.5f, 0.0f // top left point
+		-0.5f,-0.5f,0,
+		0.5f,-0.5f,0,
+		0,0.5f,0
 
 	};
 
@@ -199,10 +196,6 @@ void CreateSquare()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	std::vector<float> colours = {
-		1,0,0,1,
-		0,1,0,1,
-		0,0,1,1,
-
 		1,0,0,1,
 		0,1,0,1,
 		0,0,1,1
@@ -303,7 +296,7 @@ void Render(GLFWwindow* window)
 >>>>>>> parent of bf94329 (11)
 	glUseProgram(gShaderProgram);
 	glBindVertexArray(gTriangleVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glBindVertexArray(0);
 
 
