@@ -19,18 +19,32 @@
 
 // Keith Helpers - also includes headers needed for the libraries used
 #include "Keith Helpers.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <vector>
+#include <algorithm>
+#include <cmath>
 
 
 GLFWwindow* CreateGLFWWindow(int width, int height, const std::string& title);
 void Render(GLFWwindow* window);
-void CreateSquare();
+void CreateCube();
 void CreateShaders();
 void DefineGUI();
 
 // Since this is a simple demo we will use some globals
 // A real program should use a class to encapsulate state
-GLuint gTriangleVAO{ 0 };
+GLuint gCubeVAO{ 0 };
 GLuint gShaderProgram{ 0 };
+GLuint gNumIndices = 36; //each face is 2 triangles, 6 vertices per face
+
+//rotation
+float gRotationX = 0.0f;
+float gRotationY = 0.0f;
+float gRotationSpeedX = 0.5f;
+float gRotationSpeedY = 0.5f;
+bool gAutoRotate = true;
 
 int main()
 {
@@ -41,7 +55,7 @@ int main()
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 
-	CreateSquare();
+	CreateCube();
 	CreateShaders();
 
 	// Enter main loop until the user closes the window
@@ -59,11 +73,7 @@ int main()
 
 	// You should delete any OpenGL resources here
 	glDeleteProgram(gShaderProgram);
-	glDeleteProgram(gCubemapShader);
-	glDeleteVertexArrays(1, &gTriangleVAO);
-	glDeleteVertexArrays(1, &gCubemapVAO);
-	glDeleteTextures(1, &gCubemapTexture);
-
+	glDeleteVertexArrays(1, &gCubeVAO);
 
 	// Clean up and exit
 	glfwDestroyWindow(window);
@@ -164,140 +174,208 @@ GLFWwindow* CreateGLFWWindow(int width, int height, const std::string& title)
 	return window;
 }
 
-void CreateSquare()
+void CreateCube()
 {
-	// TODO: create a triangle
-
-	// Remember the process for OpenGL objects:
-	// 1. Create the object id e.g. glGenBuffers(1, &bufferID);
-	// 2. Bind the object e.g. glBindBuffer(GL_ARRAY_BUFFER, bufferID);
-	// 3. Set any parameters e.g. glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
-	// 4. Unbind the object e.g. glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	// You will need a VAO (Vertex Array Object) and a VBO (Vertex Buffer Object) for this triangle
-
-	// Store the VAO in global for use in rendering
-	//gTriangleVAO = VAO;
-
 	std::vector<float> verts = {
-		-0.5f,-0.5f,0,
-		0.5f,-0.5f,0,
-		0,0.5f,0
+		// Front 
+		-0.5f, -0.5f,  0.5f,
+		 0.5f, -0.5f,  0.5f,
+		-0.5f,  0.5f,  0.5f,
+		 0.5f,  0.5f,  0.5f,
 
+		 // Back
+		  0.5f, -0.5f, -0.5f,
+		 -0.5f, -0.5f, -0.5f,
+		  0.5f,  0.5f, -0.5f,
+		 -0.5f,  0.5f, -0.5f,
+
+		 // Top
+		 -0.5f,  0.5f,  0.5f,
+		  0.5f,  0.5f,  0.5f,
+		 -0.5f,  0.5f, -0.5f,
+		  0.5f,  0.5f, -0.5f,
+
+		  // Bottom
+		  -0.5f, -0.5f, -0.5f,
+		   0.5f, -0.5f, -0.5f,
+		  -0.5f, -0.5f,  0.5f,
+		   0.5f, -0.5f,  0.5f,
+
+		   // Right
+			0.5f, -0.5f,  0.5f,
+			0.5f, -0.5f, -0.5f,
+			0.5f,  0.5f,  0.5f,
+			0.5f,  0.5f, -0.5f,
+
+			// Left
+			-0.5f, -0.5f, -0.5f,
+			-0.5f, 0.5f,  0.5f,
+			-0.5f, -0.5f, -0.5f,
+			-0.5f,  0.5f,  0.5f
 	};
 
-	GLuint VBO;
-	glGenBuffers(1, &VBO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	std::vector<unsigned int> indices = {
+		// Front 
+		0, 1, 2,  2, 1, 3,
 
-	glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
+		// Back 
+		4, 5, 6,  6, 5, 7,
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+		// Top 
+		8, 9, 10,  10, 9, 11,
+
+		// Bottom
+		12, 13, 14,  14, 13, 15,
+
+		// Right
+		16, 17, 18,  18, 17, 19,
+
+		// Left
+		20, 21, 22,  22, 21, 23
+	};
 
 	std::vector<float> colours = {
-		1,0,0,1,
-		0,1,0,1,
-		0,0,1,1
+		// Front - red
+		1.0f, 0.0f, 0.0f, 1.0f,
+		1.0f, 0.0f, 0.0f, 1.0f,
+		1.0f, 0.0f, 0.0f, 1.0f,
+		1.0f, 0.0f, 0.0f, 1.0f,
 
+		// Back - green
+		0.0f, 1.0f, 0.0f, 1.0f,
+		0.0f, 1.0f, 0.0f, 1.0f,
+		0.0f, 1.0f, 0.0f, 1.0f,
+		0.0f, 1.0f, 0.0f, 1.0f,
+
+		// Top - blue
+		0.0f, 0.0f, 1.0f, 1.0f,
+		0.0f, 0.0f, 1.0f, 1.0f,
+		0.0f, 0.0f, 1.0f, 1.0f,
+		0.0f, 0.0f, 1.0f, 1.0f,
+
+		// Bottom - yellow
+		1.0f, 1.0f, 0.0f, 1.0f,
+		1.0f, 1.0f, 0.0f, 1.0f,
+		1.0f, 1.0f, 0.0f, 1.0f,
+		1.0f, 1.0f, 0.0f, 1.0f,
+
+		// Right - magenta
+		1.0f, 0.0f, 1.0f, 1.0f,
+		1.0f, 0.0f, 1.0f, 1.0f,
+		1.0f, 0.0f, 1.0f, 1.0f,
+		1.0f, 0.0f, 1.0f, 1.0f,
+
+		// Left - cyan
+		0.0f, 1.0f, 1.0f, 1.0f,
+		0.0f, 1.0f, 1.0f, 1.0f,
+		0.0f, 1.0f, 1.0f, 1.0f,
+		0.0f, 1.0f, 1.0f, 1.0f,
 	};
 
-	GLuint VBOcolour;
-	glGenBuffers(1, &VBOcolour)
-		;
-	glBindBuffer(GL_ARRAY_BUFFER, VBOcolour);
-
-	glBufferData(GL_ARRAY_BUFFER, colours.size() * sizeof(float), colours.data(), GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	GLuint VBO, EBO, VBOcolour;
 
 	GLuint VAO;
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), verts.data(), GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
 
+
+	glGenBuffers(1, &VBOcolour);
+	glBindBuffer(GL_ARRAY_BUFFER, VBOcolour);
+	glBufferData(GL_ARRAY_BUFFER, colours.size() * sizeof(float), colours.data(), GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (GLvoid*)0);
+	glEnableVertexAttribArray(1);
+
+
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
 	glBindVertexArray(0);
 
-	gTriangleVAO = VAO;
-
+	gCubeVAO = VAO;
+	gNumIndices = indices.size();
 }
 
 void CreateShaders()
 {
-	//GLuint vertexShader = KeithHelpers::LoadAndCompileShader(GL_VERTEX_SHADER, "Data/Shaders/vertex_shader.vert");
-	//GLuint fragmentShader = KeithHelpers::LoadAndCompileShader(GL_FRAGMENT_SHADER, "Data/Shaders/fragment_shader.frag");
-	//gShaderProgram = glCreateProgram();
+	GLuint vertexShader = KeithHelpers::LoadAndCompileShader(GL_VERTEX_SHADER, "Data/Shaders/vertex_shader.vert");
+	GLuint fragmentShader = KeithHelpers::LoadAndCompileShader(GL_FRAGMENT_SHADER, "Data/Shaders/fragment_shader.frag");
+	gShaderProgram = glCreateProgram();
 
-	//// Attach the vertex shader to this program (copies it)
-	//glAttachShader(gShaderProgram, vertexShader);
+	// Attach the vertex shader to this program (copies it)
+	glAttachShader(gShaderProgram, vertexShader);
 
-	//// The attibute 0 maps to the input stream "vertex_position" in the vertex shader
-	//// Not needed if you use (location=0) in the vertex shader itself
-	////glBindAttribLocation(m_program, 0, "vertex_position");
+	// The attibute 0 maps to the input stream "vertex_position" in the vertex shader
+	// Not needed if you use (location=0) in the vertex shader itself
+	//glBindAttribLocation(m_program, 0, "vertex_position");
 
-	//// Attach the fragment shader (copies it)
-	//glAttachShader(gShaderProgram, fragmentShader);
+	// Attach the fragment shader (copies it)
+	glAttachShader(gShaderProgram, fragmentShader);
 
-	//// Done with the originals of these as we have made copies
-	//glDeleteShader(vertexShader);
-	//glDeleteShader(fragmentShader);
+	// Done with the originals of these as we have made copies
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
 
-	//KeithHelpers::LinkProgramShaders(gShaderProgram);
-
-	GLuint cubemapVertexShader = KeithHelpers::LoadAndCompileShader(GL_VERTEX_SHADER, "Data/Shaders/cubemap_vertex.vert");
-	GLuint cubemapFragmentShader = KeithHelpers::LoadAndCompileShader(GL_FRAGMENT_SHADER, "Data/Shaders/cubemap_fragment.frag");
-	gCubemapShader = glCreateProgram();
-
-	glAttachShader(gCubemapShader, cubemapVertexShader);
-	glAttachShader(gCubemapShader, cubemapFragmentShader);
-	glDeleteShader(cubemapVertexShader);
-	glDeleteShader(cubemapFragmentShader);
-	KeithHelpers::LinkProgramShaders(gCubemapShader);
+	KeithHelpers::LinkProgramShaders(gShaderProgram);
 }
 
 void Render(GLFWwindow* window)
 {
 	// Clear the screen each time
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT);
 
-	glEnable(GL_DEPTH_TEST);
-
-	glDepthMask(GL_FALSE);
-	glUseProgram(gCubemapShader);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, gCubemapTexture);
-
-	glBindVertexArray(gCubemapVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
-	glBindVertexArray(0);
-
-	glDepthMask(GL_TRUE);
-
-<<<<<<< HEAD
-=======
-
-
-
-
-
-
-
-
-
-
-	// TODO: bind the vertex array object for the triangle and draw it using glDrawArrays
-	// Remember to unbind the VAO afterwards
->>>>>>> parent of bf94329 (11)
+	// Use the shader program
 	glUseProgram(gShaderProgram);
-	glBindVertexArray(gTriangleVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glBindVertexArray(0);
+
+	//update rotation
+	static float lastTime = 0.0f;
+	float currentTime = static_cast<float>(glfwGetTime());
+	float deltaTime = currentTime - lastTime;
+	lastTime = currentTime;
+
+	if (gAutoRotate)
+	{
+		gRotationX += gRotationSpeedX * deltaTime;
+		gRotationY += gRotationSpeedY * deltaTime;
+	}
+
+	//set up matrices
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::rotate(model, gRotationX, glm::vec3(1.0f, 0.0f, 0.0f));
+	model = glm::rotate(model, gRotationY, glm::vec3(0.0f, 1.0f, 0.0f));
+
+	glm::mat4 view = glm::lookAt(
+		glm::vec3(0.0f, 0.0f, 3.0f), //Camera pos
+		glm::vec3(0.0f, 0.0f, 0.0f), //look at pos
+		glm::vec3(0.0f, 1.0f, 0.0f)  //up vector
+	);
+
+	int width, height;
+	glfwGetFramebufferSize(window, &width, &height);
+	float aspect = static_cast<float>(width) / static_cast<float>(height);
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
+
+	//get locations and set matrices
+	GLuint modelLoc = glGetUniformLocation(gShaderProgram, "model");
+	GLuint viewLoc = glGetUniformLocation(gShaderProgram, "view");
+	GLuint projLoc = glGetUniformLocation(gShaderProgram, "projection");
+
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+	// Draw Triangle
+	glBindVertexArray(gCubeVAO);
+	glDrawElements(GL_TRIANGLES, gNumIndices, GL_UNSIGNED_INT, 0);
 
 
 	// IMGUI	
@@ -321,6 +399,58 @@ void DefineGUI()
 		ImGui::Text("Visibility.");             // Display some text (you can use a format strings too)	
 
 		//	ImGui::Checkbox("Wireframe", &m_wireframe);	// A checkbox linked to a member variable
+
+		ImGui::Text("Cube Rotation Controls");
+		ImGui::Separator();
+
+		//auto-rotate toggle
+		ImGui::Checkbox("Auto Rotate", &gAutoRotate);
+
+		if (gAutoRotate)
+		{
+			ImGui::Text("Rotation speed:");
+			ImGui::SliderFloat("X Speed", &gRotationSpeedX, 0.0f, 5.0f, "%.2f rad/s");
+			ImGui::SliderFloat("Y Speed", &gRotationSpeedY, 0.0f, 5.0f, "%.2f rad/s");
+
+			//reset speed
+			if (ImGui::Button("Reset Speeds"))
+			{
+				gRotationSpeedX = 0.5f;
+				gRotationSpeedY = 0.3f;
+			}
+		}
+		else
+		{
+			ImGui::Text("Auto rotation is OFF");
+			ImGui::Text("Use sliders to manually adjust rotation");
+		}
+
+		ImGui::Separator();
+
+		//manual controls 
+		ImGui::Text("Manual rotation angles:");
+		ImGui::SliderFloat("X Rotation", &gRotationX, 0.0f, 6.28318f, "%.3f rad");
+		ImGui::SliderFloat("Y Rotation", &gRotationY, 0.0f, 6.28318f, "%.3f rad");
+
+		//rest rotation
+		if (ImGui::Button("Reset Rotation"))
+		{
+			gRotationX = 0.0f;
+			gRotationY = 0.0f;
+		}
+
+		ImGui::SameLine();
+
+		//Random rotation
+		if (ImGui::Button("RandomRotation"))
+		{
+			gRotationX = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 6.28318f;
+			gRotationY = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 6.28318f;
+		}
+
+		ImGui::Separator();
+
+
 
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
