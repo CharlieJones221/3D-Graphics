@@ -30,7 +30,10 @@
 GLFWwindow* CreateGLFWWindow(int width, int height, const std::string& title);
 void Render(GLFWwindow* window);
 void CreateCube();
+void CreateSkybox();
+void LoadCubemap();
 void CreateShaders();
+void CreateSkyboxShaders();
 void DefineGUI();
 
 // Since this is a simple demo we will use some globals
@@ -38,6 +41,13 @@ void DefineGUI();
 GLuint gCubeVAO{ 0 };
 GLuint gShaderProgram{ 0 };
 GLuint gNumIndices = 36; //each face is 2 triangles, 6 vertices per face
+
+// Skybox variables
+GLuint gSkyboxVAO{ 0 };
+GLuint gSkyboxVBO{ 0 };
+GLuint gSkyboxTexture{ 0 };
+GLuint gSkyboxShaderProgram{ 0 };
+bool gShowSkybox = true;
 
 //rotation
 float gRotationX = 0.0f;
@@ -55,8 +65,15 @@ int main()
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
 
+	// Enable depth testing
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
 	CreateCube();
+	CreateSkybox();
+	LoadCubemap();
 	CreateShaders();
+	CreateSkyboxShaders();
 
 	// Enter main loop until the user closes the window
 	while (!glfwWindowShouldClose(window))
@@ -73,7 +90,11 @@ int main()
 
 	// You should delete any OpenGL resources here
 	glDeleteProgram(gShaderProgram);
+	glDeleteProgram(gSkyboxShaderProgram);
 	glDeleteVertexArrays(1, &gCubeVAO);
+	glDeleteVertexArrays(1, &gSkyboxVAO);
+	glDeleteBuffers(1, &gSkyboxVBO);
+	glDeleteTextures(1, &gSkyboxTexture);
 
 	// Clean up and exit
 	glfwDestroyWindow(window);
@@ -209,11 +230,10 @@ void CreateCube()
 
 			// Left
 			-0.5f, -0.5f, -0.5f,
-			-0.5f, 0.5f,  0.5f,
-			-0.5f, -0.5f, -0.5f,
+			-0.5f, -0.5f,  0.5f,
+			-0.5f,  0.5f, -0.5f,
 			-0.5f,  0.5f,  0.5f
 	};
-
 
 	std::vector<unsigned int> indices = {
 		// Front 
@@ -304,6 +324,101 @@ void CreateCube()
 	gNumIndices = indices.size();
 }
 
+void CreateSkybox()
+{
+	// Skybox vertices (position only)
+	float skyboxVertices[] = {
+		// positions          
+		-1.0f,  1.0f, -1.0f,
+		-1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		-1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f
+	};
+
+	glGenVertexArrays(1, &gSkyboxVAO);
+	glGenBuffers(1, &gSkyboxVBO);
+	glBindVertexArray(gSkyboxVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, gSkyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glBindVertexArray(0);
+}
+
+void LoadCubemap()
+{
+	// List of cubemap texture filenames
+	std::vector<std::string> faces = {
+		"Data/Models/Sky/Clouds/SkyBox_Right.tga",   // Right
+		"Data/Models/Sky/Clouds/SkyBox_Left.tga",    // Left
+		"Data/Models/Sky/Clouds/SkyBox_Top.tga",     // Top
+		"Data/Models/Sky/Clouds/SkyBox_Bottom.tga",  // Bottom
+		"Data/Models/Sky/Clouds/SkyBox_Front.tga",   // Front
+		"Data/Models/Sky/Clouds/SkyBox_Back.tga"     // Back
+	};
+
+	glGenTextures(1, &gSkyboxTexture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, gSkyboxTexture);
+
+	// Load each face
+	for (unsigned int i = 0; i < faces.size(); i++)
+	{
+		// Load TGA file (you may need to implement TGA loading or use a library)
+		// For simplicity, I'll show the structure but you'll need to implement TGA loading
+		std::cout << "Loading skybox texture: " << faces[i] << std::endl;
+
+		// Note: You need to implement TGA loading here
+		// For now, we'll create a placeholder texture
+		unsigned char placeholder[4] = { 128, 128, 255, 255 }; // Light blue
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA,
+			1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, placeholder);
+	}
+
+	// Set texture parameters
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+}
+
 void CreateShaders()
 {
 	GLuint vertexShader = KeithHelpers::LoadAndCompileShader(GL_VERTEX_SHADER, "Data/Shaders/vertex_shader.vert");
@@ -327,14 +442,60 @@ void CreateShaders()
 	KeithHelpers::LinkProgramShaders(gShaderProgram);
 }
 
+void CreateSkyboxShaders()
+{
+	// Create skybox vertex shader
+	const char* skyboxVertexShaderSource = R"(
+		#version 460 core
+		layout(location = 0) in vec3 position;
+		out vec3 TexCoords;
+		uniform mat4 projection;
+		uniform mat4 view;
+		void main()
+		{
+			TexCoords = position;
+			vec4 pos = projection * mat4(mat3(view)) * vec4(position, 1.0);
+			gl_Position = pos.xyww;
+		}
+	)";
+
+	// Create skybox fragment shader
+	const char* skyboxFragmentShaderSource = R"(
+		#version 460 core
+		in vec3 TexCoords;
+		out vec4 fragment_colour;
+		uniform samplerCube skybox;
+		void main()
+		{
+			fragment_colour = texture(skybox, TexCoords);
+		}
+	)";
+
+	// Compile skybox shaders
+	GLuint skyboxVertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(skyboxVertexShader, 1, &skyboxVertexShaderSource, NULL);
+	glCompileShader(skyboxVertexShader);
+
+	GLuint skyboxFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(skyboxFragmentShader, 1, &skyboxFragmentShaderSource, NULL);
+	glCompileShader(skyboxFragmentShader);
+
+	// Create and link skybox shader program
+	gSkyboxShaderProgram = glCreateProgram();
+	glAttachShader(gSkyboxShaderProgram, skyboxVertexShader);
+	glAttachShader(gSkyboxShaderProgram, skyboxFragmentShader);
+	glLinkProgram(gSkyboxShaderProgram);
+
+	// Clean up shaders
+	glDeleteShader(skyboxVertexShader);
+	glDeleteShader(skyboxFragmentShader);
+}
+
 void Render(GLFWwindow* window)
 {
 	// Clear the screen each time
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	// Use the shader program
-	glUseProgram(gShaderProgram);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//update rotation
 	static float lastTime = 0.0f;
@@ -364,6 +525,41 @@ void Render(GLFWwindow* window)
 	float aspect = static_cast<float>(width) / static_cast<float>(height);
 	glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
 
+	// Render skybox first
+	if (gShowSkybox)
+	{
+		// Change depth function so depth test passes when values are equal to depth buffer's content
+		glDepthFunc(GL_LEQUAL);
+
+		// Use skybox shader
+		glUseProgram(gSkyboxShaderProgram);
+
+		// Set matrices (remove translation from view matrix for skybox)
+		glm::mat4 viewWithoutTranslation = glm::mat4(glm::mat3(view));
+		GLuint viewLoc = glGetUniformLocation(gSkyboxShaderProgram, "view");
+		GLuint projLoc = glGetUniformLocation(gSkyboxShaderProgram, "projection");
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewWithoutTranslation));
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		// Bind skybox texture
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, gSkyboxTexture);
+		GLuint skyboxLoc = glGetUniformLocation(gSkyboxShaderProgram, "skybox");
+		glUniform1i(skyboxLoc, 0);
+
+		// Draw skybox
+		glBindVertexArray(gSkyboxVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);
+
+		// Reset depth function
+		glDepthFunc(GL_LESS);
+	}
+
+	// Render colored cube
+	// Use the shader program
+	glUseProgram(gShaderProgram);
+
 	//get locations and set matrices
 	GLuint modelLoc = glGetUniformLocation(gShaderProgram, "model");
 	GLuint viewLoc = glGetUniformLocation(gShaderProgram, "view");
@@ -373,7 +569,7 @@ void Render(GLFWwindow* window)
 	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-	// Draw Triangle
+	// Draw Cube
 	glBindVertexArray(gCubeVAO);
 	glDrawElements(GL_TRIANGLES, gNumIndices, GL_UNSIGNED_INT, 0);
 
@@ -398,7 +594,7 @@ void DefineGUI()
 
 		ImGui::Text("Visibility.");             // Display some text (you can use a format strings too)	
 
-		//	ImGui::Checkbox("Wireframe", &m_wireframe);	// A checkbox linked to a member variable
+		ImGui::Checkbox("Show Skybox", &gShowSkybox);
 
 		ImGui::Text("Cube Rotation Controls");
 		ImGui::Separator();
@@ -449,8 +645,6 @@ void DefineGUI()
 		}
 
 		ImGui::Separator();
-
-
 
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
