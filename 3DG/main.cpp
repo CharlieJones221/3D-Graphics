@@ -444,51 +444,25 @@ void CreateShaders()
 
 void CreateSkyboxShaders()
 {
-	// Create skybox vertex shader
-	const char* skyboxVertexShaderSource = R"(
-		#version 460 core
-		layout(location = 0) in vec3 position;
-		out vec3 TexCoords;
-		uniform mat4 projection;
-		uniform mat4 view;
-		void main()
-		{
-			TexCoords = position;
-			vec4 pos = projection * mat4(mat3(view)) * vec4(position, 1.0);
-			gl_Position = pos.xyww;
-		}
-	)";
+	GLuint vertexShader = KeithHelpers::LoadAndCompileShader(GL_VERTEX_SHADER, "Data/Shaders/vertex_shader.vert");
+	GLuint fragmentShader = KeithHelpers::LoadAndCompileShader(GL_FRAGMENT_SHADER, "Data/Shaders/fragment_shader.frag");
+	gShaderProgram = glCreateProgram();
 
-	// Create skybox fragment shader
-	const char* skyboxFragmentShaderSource = R"(
-		#version 460 core
-		in vec3 TexCoords;
-		out vec4 fragment_colour;
-		uniform samplerCube skybox;
-		void main()
-		{
-			fragment_colour = texture(skybox, TexCoords);
-		}
-	)";
+	// Attach the vertex shader to this program (copies it)
+	glAttachShader(gShaderProgram, vertexShader);
 
-	// Compile skybox shaders
-	GLuint skyboxVertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(skyboxVertexShader, 1, &skyboxVertexShaderSource, NULL);
-	glCompileShader(skyboxVertexShader);
+	// The attibute 0 maps to the input stream "vertex_position" in the vertex shader
+	// Not needed if you use (location=0) in the vertex shader itself
+	//glBindAttribLocation(m_program, 0, "vertex_position");
 
-	GLuint skyboxFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(skyboxFragmentShader, 1, &skyboxFragmentShaderSource, NULL);
-	glCompileShader(skyboxFragmentShader);
+	// Attach the fragment shader (copies it)
+	glAttachShader(gShaderProgram, fragmentShader);
 
-	// Create and link skybox shader program
-	gSkyboxShaderProgram = glCreateProgram();
-	glAttachShader(gSkyboxShaderProgram, skyboxVertexShader);
-	glAttachShader(gSkyboxShaderProgram, skyboxFragmentShader);
-	glLinkProgram(gSkyboxShaderProgram);
+	// Done with the originals of these as we have made copies
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
 
-	// Clean up shaders
-	glDeleteShader(skyboxVertexShader);
-	glDeleteShader(skyboxFragmentShader);
+	KeithHelpers::LinkProgramShaders(gShaderProgram);
 }
 
 void Render(GLFWwindow* window)
